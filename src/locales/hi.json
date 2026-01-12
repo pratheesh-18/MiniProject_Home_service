@@ -143,5 +143,9 @@
     "aboutUs": "हमारे बारे में",
     "careers": "करियर",
     "blog": "ब्लॉग"
+  },
+  "home": {
+    "featuredProviders": "विशेष सेवा प्रदाता",
+    "featuredProvidersDesc": "आपके लिए अनुशंसित विश्वसनीय सेवा प्रदाताओं को खोजें"
   }
 }

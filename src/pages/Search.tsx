@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Search, Filter, MapPin, SlidersHorizontal, List, Map } from 'lucide-react';
+import { Search, Filter, MapPin, SlidersHorizontal, List, Map, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,26 +24,114 @@ import {
 import { ProviderMap } from '@/components/map/ProviderMap';
 import { ProviderCard } from '@/components/providers/ProviderCard';
 import { BookingModal } from '@/components/booking/BookingModal';
-import { mockProviders, serviceCategories } from '@/data/mockData';
-import { Provider, useAppStore } from '@/store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
+import { providersAPI } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
+
+interface BackendProvider {
+  _id: string;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  services: string[];
+  hourlyRate: number;
+  rating: number;
+  totalRatings: number;
+  isAvailable: boolean;
+  isVerified: boolean;
+  badges: string[];
+  currentLocation?: {
+    coordinates: [number, number]; // [longitude, latitude]
+  };
+  bio?: string;
+  experience?: number;
+}
+
+// Transform backend provider to frontend Provider format
+const transformProvider = (backendProvider: BackendProvider, userLocation?: { lat: number; lng: number }): any => {
+  const [longitude, latitude] = backendProvider.currentLocation?.coordinates || [0, 0];
+  
+  // Calculate distance if user location is available
+  let distance = 0;
+  if (userLocation && latitude && longitude) {
+    const R = 6371; // Earth's radius in km
+    const dLat = ((latitude - userLocation.lat) * Math.PI) / 180;
+    const dLon = ((longitude - userLocation.lng) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((userLocation.lat * Math.PI) / 180) *
+        Math.cos((latitude * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    distance = R * c;
+  }
+
+  return {
+    id: backendProvider._id,
+    name: backendProvider.user.name,
+    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(backendProvider.user.name)}&background=0d9488&color=fff`,
+    services: backendProvider.services || [],
+    hourlyRate: backendProvider.hourlyRate || 0,
+    rating: backendProvider.rating || 0,
+    reviewCount: backendProvider.totalRatings || 0,
+    distance: parseFloat(distance.toFixed(2)),
+    isAvailable: backendProvider.isAvailable,
+    isVerified: backendProvider.isVerified,
+    badges: backendProvider.badges || [],
+    location: { lat: latitude, lng: longitude },
+    phone: backendProvider.user.phone,
+    completedJobs: backendProvider.totalRatings || 0,
+    responseTime: '15 min', // Default value
+    memberSince: '2024', // Default value
+    about: backendProvider.bio || '',
+  };
+};
 
 export default function SearchPage() {
   const { t } = useTranslation();
-  const { selectedService, setSelectedService, searchQuery, searchRadius, setSearchRadius } = useAppStore();
+  const { toast } = useToast();
+  const { selectedService, setSelectedService, searchQuery, searchRadius, setSearchRadius, userLocation } = useAppStore();
   const [view, setView] = useState<'list' | 'map'>('list');
   const [sortBy, setSortBy] = useState<'distance' | 'rating' | 'price'>('distance');
   const [searchInput, setSearchInput] = useState(searchQuery);
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const [providerToBook, setProviderToBook] = useState<Provider | null>(null);
+  const [providerToBook, setProviderToBook] = useState<any | null>(null);
+  const [providers, setProviders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProviders();
+  }, []);
+
+  const loadProviders = async () => {
+    setLoading(true);
+    try {
+      const data = await providersAPI.getAll();
+      const transformed = data.map((p: BackendProvider) => transformProvider(p, userLocation || undefined));
+      setProviders(transformed);
+    } catch (error: any) {
+      toast({
+        title: 'Error loading providers',
+        description: error.message || 'Failed to load providers',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter and sort providers
   const filteredProviders = useMemo(() => {
-    let result = [...mockProviders];
+    let result = [...providers];
 
     // Filter by service
     if (selectedService) {
-      result = result.filter(p => p.services.includes(selectedService));
+      result = result.filter(p => p.services.some((s: string) => s.toLowerCase().includes(selectedService.toLowerCase())));
     }
 
     // Filter by search query
@@ -51,12 +139,14 @@ export default function SearchPage() {
       const query = searchInput.toLowerCase();
       result = result.filter(p => 
         p.name.toLowerCase().includes(query) ||
-        p.services.some(s => s.toLowerCase().includes(query))
+        p.services.some((s: string) => s.toLowerCase().includes(query))
       );
     }
 
-    // Filter by radius
-    result = result.filter(p => p.distance <= searchRadius);
+    // Filter by radius (if user location available)
+    if (userLocation) {
+      result = result.filter(p => p.distance <= searchRadius);
+    }
 
     // Sort
     switch (sortBy) {
@@ -72,12 +162,22 @@ export default function SearchPage() {
     }
 
     return result;
-  }, [selectedService, searchInput, searchRadius, sortBy]);
+  }, [providers, selectedService, searchInput, searchRadius, sortBy, userLocation]);
 
-  const handleBook = (provider: Provider) => {
+  const handleBook = (provider: any) => {
     setProviderToBook(provider);
     setIsBookingOpen(true);
   };
+
+  if (loading) {
+    return (
+      <Layout showFooter={false}>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout showFooter={false}>
@@ -123,52 +223,30 @@ export default function SearchPage() {
                     </SheetHeader>
                     <div className="mt-6 space-y-6">
                       {/* Radius */}
-                      <div>
-                        <label className="text-sm font-medium mb-3 block">
-                          Search Radius: {searchRadius} km
-                        </label>
-                        <Slider
-                          value={[searchRadius]}
-                          onValueChange={([v]) => setSearchRadius(v)}
-                          min={1}
-                          max={20}
-                          step={1}
-                        />
-                      </div>
-
-                      {/* Services */}
-                      <div>
-                        <label className="text-sm font-medium mb-3 block">Service</label>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge
-                            variant={!selectedService ? 'default' : 'outline'}
-                            className="cursor-pointer"
-                            onClick={() => setSelectedService(null)}
-                          >
-                            All
-                          </Badge>
-                          {serviceCategories.map((service) => (
-                            <Badge
-                              key={service.id}
-                              variant={selectedService === service.id ? 'default' : 'outline'}
-                              className="cursor-pointer"
-                              onClick={() => setSelectedService(service.id)}
-                            >
-                              {service.icon} {t(`services.${service.id}`)}
-                            </Badge>
-                          ))}
+                      {userLocation && (
+                        <div>
+                          <label className="text-sm font-medium mb-3 block">
+                            Radius: {searchRadius} km
+                          </label>
+                          <Slider
+                            value={[searchRadius]}
+                            onValueChange={(value) => setSearchRadius(value[0])}
+                            max={50}
+                            min={1}
+                            step={1}
+                          />
                         </div>
-                      </div>
+                      )}
                     </div>
                   </SheetContent>
                 </Sheet>
 
                 {/* View Toggle */}
-                <div className="flex rounded-lg border border-border overflow-hidden">
+                <div className="flex border rounded-lg overflow-hidden">
                   <Button
                     variant={view === 'list' ? 'default' : 'ghost'}
                     size="icon"
-                    className="rounded-none h-12 w-12"
+                    className="h-12 w-12 rounded-none"
                     onClick={() => setView('list')}
                   >
                     <List className="w-5 h-5" />
@@ -176,36 +254,13 @@ export default function SearchPage() {
                   <Button
                     variant={view === 'map' ? 'default' : 'ghost'}
                     size="icon"
-                    className="rounded-none h-12 w-12"
+                    className="h-12 w-12 rounded-none"
                     onClick={() => setView('map')}
                   >
                     <Map className="w-5 h-5" />
                   </Button>
                 </div>
               </div>
-            </div>
-
-            {/* Service Chips */}
-            <div className="flex gap-2 mt-4 overflow-x-auto pb-2 scrollbar-hide">
-              <Badge
-                variant={!selectedService ? 'default' : 'outline'}
-                className="cursor-pointer whitespace-nowrap"
-                onClick={() => setSelectedService(null)}
-              >
-                All Services
-              </Badge>
-              {serviceCategories.map((service) => (
-                <Badge
-                  key={service.id}
-                  variant={selectedService === service.id ? 'default' : 'outline'}
-                  className={`cursor-pointer whitespace-nowrap ${
-                    selectedService === service.id ? 'accent-gradient text-accent-foreground' : ''
-                  }`}
-                  onClick={() => setSelectedService(service.id)}
-                >
-                  {service.icon} {t(`services.${service.id}`)}
-                </Badge>
-              ))}
             </div>
           </div>
         </div>
@@ -237,6 +292,12 @@ export default function SearchPage() {
                 onProviderSelect={setSelectedProvider}
                 className="h-full"
               />
+            </div>
+          )}
+
+          {filteredProviders.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No providers found</p>
             </div>
           )}
         </div>

@@ -1,26 +1,117 @@
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { 
   Star, MapPin, CheckCircle, Clock, Phone, MessageSquare, 
-  Calendar, ArrowLeft, Shield, Award, Briefcase, Share2 
+  Calendar, ArrowLeft, Shield, Award, Briefcase, Share2, Loader2
 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockProviders } from '@/data/mockData';
-import { useState } from 'react';
+import { providersAPI, ratingsAPI } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
+import { useState as useBookingState } from 'react';
 import { BookingModal } from '@/components/booking/BookingModal';
+
+interface ProviderData {
+  _id: string;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  services: string[];
+  hourlyRate: number;
+  rating: number;
+  totalRatings: number;
+  isAvailable: boolean;
+  isVerified: boolean;
+  badges: string[];
+  currentLocation?: {
+    coordinates: [number, number];
+  };
+  bio?: string;
+  experience?: number;
+}
+
+const transformProvider = (backendProvider: ProviderData) => {
+  const [longitude, latitude] = backendProvider.currentLocation?.coordinates || [0, 0];
+  
+  return {
+    id: backendProvider._id,
+    name: backendProvider.user.name,
+    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(backendProvider.user.name)}&background=0d9488&color=fff`,
+    services: backendProvider.services || [],
+    hourlyRate: backendProvider.hourlyRate || 0,
+    rating: backendProvider.rating || 0,
+    reviewCount: backendProvider.totalRatings || 0,
+    distance: 0,
+    isAvailable: backendProvider.isAvailable,
+    isVerified: backendProvider.isVerified,
+    badges: backendProvider.badges || [],
+    location: { lat: latitude, lng: longitude },
+    phone: backendProvider.user.phone,
+    completedJobs: backendProvider.totalRatings || 0,
+    responseTime: '15 min',
+    memberSince: '2024',
+    about: backendProvider.bio || '',
+  };
+};
 
 export default function ProviderProfilePage() {
   const { id } = useParams();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [provider, setProvider] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [ratings, setRatings] = useState<any[]>([]);
 
-  const provider = mockProviders.find(p => p.id === id);
+  useEffect(() => {
+    if (id) {
+      loadProvider();
+    }
+  }, [id]);
+
+  const loadProvider = async () => {
+    setLoading(true);
+    try {
+      const data = await providersAPI.getById(id!);
+      const transformed = transformProvider(data);
+      setProvider(transformed);
+
+      // Load ratings
+      try {
+        const ratingsData = await ratingsAPI.getByProvider(id!);
+        setRatings(ratingsData);
+      } catch (error) {
+        console.error('Error loading ratings:', error);
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Provider not found',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
 
   if (!provider) {
     return (
@@ -37,12 +128,6 @@ export default function ProviderProfilePage() {
     { label: t('profile.completedJobs'), value: provider.completedJobs, icon: Briefcase },
     { label: t('profile.responseTime'), value: provider.responseTime, icon: Clock },
     { label: t('profile.memberSince'), value: provider.memberSince, icon: Calendar },
-  ];
-
-  const reviews = [
-    { name: 'Priya S.', rating: 5, comment: 'Excellent service! Very professional and timely.', date: '2 days ago' },
-    { name: 'Rahul M.', rating: 4, comment: 'Good work, would recommend.', date: '1 week ago' },
-    { name: 'Anitha K.', rating: 5, comment: 'Best plumber in the area. Fixed my issue quickly.', date: '2 weeks ago' },
   ];
 
   return (
@@ -66,10 +151,10 @@ export default function ProviderProfilePage() {
                 <img
                   src={provider.avatar}
                   alt={provider.name}
-                  className="w-32 h-32 rounded-2xl object-cover border-4 border-primary-foreground/20"
+                  className="w-24 h-24 md:w-32 md:h-32 rounded-2xl object-cover border-4 border-primary-foreground/20"
                 />
                 {provider.isAvailable && (
-                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-success rounded-full border-4 border-primary flex items-center justify-center">
+                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-success rounded-full border-4 border-card flex items-center justify-center">
                     <CheckCircle className="w-4 h-4 text-success-foreground" />
                   </div>
                 )}
@@ -77,65 +162,70 @@ export default function ProviderProfilePage() {
 
               {/* Info */}
               <div className="flex-1 text-primary-foreground">
-                <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold">{provider.name}</h1>
-                  {provider.isVerified && (
-                    <Badge className="bg-primary-foreground/20 text-primary-foreground">
-                      <Shield className="w-3 h-3 mr-1" />
-                      {t('providers.verified')}
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-5 h-5 fill-warning text-warning" />
-                    <span className="font-semibold text-lg">{provider.rating}</span>
-                    <span className="text-primary-foreground/70">
-                      ({provider.reviewCount} {t('providers.reviews')})
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-primary-foreground/70">
-                    <MapPin className="w-4 h-4" />
-                    <span>{provider.distance} {t('providers.distance')}</span>
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h1 className="text-3xl md:text-4xl font-bold mb-2">{provider.name}</h1>
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-5 h-5 fill-warning text-warning" />
+                        <span className="text-xl font-bold">{provider.rating.toFixed(1)}</span>
+                        <span className="text-primary-foreground/80">
+                          ({provider.reviewCount} {t('providers.reviews')})
+                        </span>
+                      </div>
+                      {provider.isVerified && (
+                        <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground">
+                          <Shield className="w-3 h-3 mr-1" />
+                          {t('providers.verified')}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Badges */}
-                <div className="flex flex-wrap gap-2">
-                  {provider.badges.map((badge) => (
-                    <Badge key={badge} variant="secondary" className="bg-primary-foreground/10 text-primary-foreground">
-                      <Award className="w-3 h-3 mr-1" />
-                      {t(`badges.${badge}`)}
+                {/* Services */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {provider.services.map((service: string) => (
+                    <Badge
+                      key={service}
+                      variant="secondary"
+                      className="bg-primary-foreground/20 text-primary-foreground"
+                    >
+                      {service}
                     </Badge>
+                  ))}
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4 mt-6">
+                  {stats.map((stat, index) => (
+                    <div key={index} className="text-center">
+                      <stat.icon className="w-5 h-5 mx-auto mb-2 text-primary-foreground/80" />
+                      <p className="text-sm text-primary-foreground/80">{stat.label}</p>
+                      <p className="text-lg font-bold">{stat.value}</p>
+                    </div>
                   ))}
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col gap-2 w-full md:w-auto">
-                <div className="text-right mb-2">
-                  <div className="text-3xl font-bold text-primary-foreground">
-                    ₹{provider.hourlyRate}
-                  </div>
-                  <div className="text-primary-foreground/70">{t('providers.perHour')}</div>
-                </div>
+              <div className="flex flex-col gap-3 w-full md:w-auto">
                 <Button
                   size="lg"
-                  className="bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                  className="w-full md:w-auto accent-gradient text-accent-foreground"
                   onClick={() => setIsBookingOpen(true)}
                   disabled={!provider.isAvailable}
                 >
-                  <Calendar className="w-4 h-4 mr-2" />
+                  <Calendar className="w-5 h-5 mr-2" />
                   {t('common.book')}
                 </Button>
                 <Button
-                  size="lg"
                   variant="outline"
-                  className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+                  size="lg"
+                  className="w-full md:w-auto bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20"
                   onClick={() => window.open(`tel:${provider.phone}`, '_self')}
                 >
-                  <Phone className="w-4 h-4 mr-2" />
+                  <Phone className="w-5 h-5 mr-2" />
                   {t('providers.callNow')}
                 </Button>
               </div>
@@ -143,159 +233,80 @@ export default function ProviderProfilePage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="container mx-auto px-4 -mt-6">
-          <div className="grid grid-cols-3 gap-4">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-card rounded-xl p-4 shadow-md text-center"
-              >
-                <stat.icon className="w-6 h-6 mx-auto mb-2 text-accent" />
-                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
         {/* Content */}
         <div className="container mx-auto px-4 py-8">
-          <Tabs defaultValue="about" className="w-full">
-            <TabsList className="w-full justify-start mb-6">
+          <Tabs defaultValue="about" className="space-y-6">
+            <TabsList>
               <TabsTrigger value="about">{t('profile.about')}</TabsTrigger>
-              <TabsTrigger value="services">{t('profile.services')}</TabsTrigger>
-              <TabsTrigger value="reviews">{t('profile.reviews')}</TabsTrigger>
+              <TabsTrigger value="reviews">
+                {t('profile.reviews')} ({ratings.length})
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="about" className="space-y-6">
-              <div className="bg-card rounded-xl p-6">
-                <h3 className="font-semibold text-lg mb-3">{t('profile.about')}</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  {provider.about}
+              <div className="bg-card rounded-xl p-6 border border-border">
+                <h3 className="text-xl font-bold mb-4">{t('profile.AboutProvider')}</h3>
+                <p className="text-muted-foreground">
+                  {provider.about || 'No description available.'}
                 </p>
               </div>
 
-              <div className="bg-card rounded-xl p-6">
-                <h3 className="font-semibold text-lg mb-3">{t('profile.availability')}</h3>
-                <div className="grid grid-cols-7 gap-2">
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => (
-                    <div
-                      key={day}
-                      className={`text-center py-3 rounded-lg ${
-                        i < 6 ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      <div className="text-xs">{day}</div>
-                      <div className="text-sm font-medium mt-1">
-                        {i < 6 ? '9AM-6PM' : 'Off'}
-                      </div>
-                    </div>
-                  ))}
+              <div className="bg-card rounded-xl p-6 border border-border">
+                <h3 className="text-xl font-bold mb-4">Pricing</h3>
+                <div className="text-3xl font-bold text-accent">
+                  ₹{provider.hourlyRate}
+                  <span className="text-lg font-normal text-muted-foreground">/hour</span>
                 </div>
               </div>
-            </TabsContent>
-
-            <TabsContent value="services" className="space-y-4">
-              {provider.services.map((service) => (
-                <div key={service} className="bg-card rounded-xl p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold text-lg capitalize">
-                        {t(`services.${service}`)}
-                      </h4>
-                      <p className="text-muted-foreground mt-1">
-                        {t(`services.${service}Desc`)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-accent">₹{provider.hourlyRate}</div>
-                      <div className="text-sm text-muted-foreground">{t('providers.perHour')}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
             </TabsContent>
 
             <TabsContent value="reviews" className="space-y-4">
-              {/* Rating Summary */}
-              <div className="bg-card rounded-xl p-6">
-                <div className="flex items-center gap-6">
-                  <div className="text-center">
-                    <div className="text-5xl font-bold text-foreground">{provider.rating}</div>
-                    <div className="flex items-center justify-center gap-1 mt-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className={`w-4 h-4 ${
-                            star <= Math.round(provider.rating)
-                              ? 'fill-warning text-warning'
-                              : 'text-muted'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {provider.reviewCount} reviews
-                    </div>
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    {[5, 4, 3, 2, 1].map((rating) => (
-                      <div key={rating} className="flex items-center gap-2">
-                        <span className="w-3 text-sm text-muted-foreground">{rating}</span>
-                        <Progress
-                          value={rating === 5 ? 70 : rating === 4 ? 20 : 10}
-                          className="h-2"
-                        />
+              {ratings.length > 0 ? (
+                ratings.map((rating: any) => (
+                  <div key={rating._id} className="bg-card rounded-xl p-6 border border-border">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="font-semibold">{rating.customer?.name || 'Customer'}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i < rating.rating
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-muted-foreground'
+                              }`}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    ))}
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(rating.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {rating.review && (
+                      <p className="text-muted-foreground mt-2">{rating.review}</p>
+                    )}
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  No reviews yet
                 </div>
-              </div>
-
-              {/* Reviews List */}
-              {reviews.map((review, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-card rounded-xl p-6"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <div className="font-medium">{review.name}</div>
-                      <div className="text-sm text-muted-foreground">{review.date}</div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className={`w-4 h-4 ${
-                            star <= review.rating
-                              ? 'fill-warning text-warning'
-                              : 'text-muted'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground">{review.comment}</p>
-                </motion.div>
-              ))}
+              )}
             </TabsContent>
           </Tabs>
         </div>
       </div>
 
-      <BookingModal
-        provider={provider}
-        isOpen={isBookingOpen}
-        onClose={() => setIsBookingOpen(false)}
-      />
+      {/* Booking Modal */}
+      {provider && (
+        <BookingModal
+          provider={provider}
+          isOpen={isBookingOpen}
+          onClose={() => setIsBookingOpen(false)}
+        />
+      )}
     </Layout>
   );
 }

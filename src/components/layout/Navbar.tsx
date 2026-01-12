@@ -1,16 +1,19 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Globe, MapPin, User, Bell } from 'lucide-react';
+import { Menu, X, Globe, MapPin, User, Bell, Shield, LogOut, Briefcase, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAppStore } from '@/store/useAppStore';
+import { authAPI } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 const languages = [
   { code: 'en', name: 'English', flag: '🇬🇧' },
@@ -21,12 +24,23 @@ const languages = [
 export function Navbar() {
   const { t, i18n } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const { user, userLocation } = useAppStore();
+  const { user, userLocation, setUser } = useAppStore();
+
+  const handleLogout = () => {
+    authAPI.logout();
+    setUser(null);
+    toast({
+      title: 'Logged out',
+      description: 'You have been successfully logged out',
+    });
+    navigate('/');
+  };
 
   const navLinks = [
     { path: '/', label: t('nav.home') },
-    { path: '/services', label: t('nav.services') },
     { path: '/search', label: t('nav.providers') },
     { path: '/bookings', label: t('nav.bookings') },
   ];
@@ -120,14 +134,55 @@ export function Navbar() {
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem disabled>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{user.name}</span>
+                      <span className="text-xs text-muted-foreground">{user.email}</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {user.role === 'admin' && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" className="flex items-center cursor-pointer">
+                          <Shield className="w-4 h-4 mr-2" />
+                          Admin Panel
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {user.role === 'provider' && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/provider/dashboard" className="flex items-center cursor-pointer">
+                          <Briefcase className="w-4 h-4 mr-2" />
+                          Provider Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/provider/bookings" className="flex items-center cursor-pointer">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          My Bookings
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem>{t('common.profile')}</DropdownMenuItem>
                   <DropdownMenuItem>{t('common.settings')}</DropdownMenuItem>
-                  <DropdownMenuItem>{t('common.logout')}</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    {t('common.logout')}
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button size="sm">{t('common.login')}</Button>
+              <Button size="sm" asChild>
+                <Link to="/login">{t('common.login')}</Link>
+              </Button>
             )}
           </div>
 
@@ -168,6 +223,66 @@ export function Navbar() {
                 </Link>
               ))}
               
+              {/* Mobile User Section */}
+              {user ? (
+                <div className="pt-4 border-t border-border space-y-2">
+                  <div className="px-4 py-2">
+                    <p className="font-medium">{user.name}</p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                  </div>
+                  {user.role === 'admin' && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setIsOpen(false)}
+                      className="block px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                    >
+                      <Shield className="w-4 h-4 inline mr-2" />
+                      Admin Panel
+                    </Link>
+                  )}
+                  {user.role === 'provider' && (
+                    <>
+                      <Link
+                        to="/provider/dashboard"
+                        onClick={() => setIsOpen(false)}
+                        className="block px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                      >
+                        <Briefcase className="w-4 h-4 inline mr-2" />
+                        Provider Dashboard
+                      </Link>
+                      <Link
+                        to="/provider/bookings"
+                        onClick={() => setIsOpen(false)}
+                        className="block px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                      >
+                        <Calendar className="w-4 h-4 inline mr-2" />
+                        My Bookings
+                      </Link>
+                    </>
+                  )}
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 rounded-lg text-sm font-medium text-destructive hover:bg-muted"
+                  >
+                    <LogOut className="w-4 h-4 inline mr-2" />
+                    {t('common.logout')}
+                  </button>
+                </div>
+              ) : (
+                <div className="pt-4 border-t border-border">
+                  <Link
+                    to="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="block px-4 py-3 rounded-lg text-sm font-medium bg-primary text-primary-foreground text-center"
+                  >
+                    {t('common.login')}
+                  </Link>
+                </div>
+              )}
+
               {/* Mobile Language Selector */}
               <div className="flex items-center gap-2 pt-4 border-t border-border">
                 {languages.map((lang) => (

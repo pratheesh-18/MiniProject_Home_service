@@ -113,7 +113,8 @@
     "hourlyRate": "Hourly Rate",
     "completedJobs": "Completed Jobs",
     "responseTime": "Avg Response Time",
-    "memberSince": "Member Since"
+    "memberSince": "Member Since",
+    "AboutProvider":"About Provider"
   },
   "ratings": {
     "title": "Ratings & Reviews",
@@ -143,5 +144,12 @@
     "aboutUs": "About Us",
     "careers": "Careers",
     "blog": "Blog"
-  }
+  },
+  
+  "home": {
+    "featuredProviders": "Featured Providers",
+    "featuredProvidersDesc": "Discover trusted service providers recommended for you"
+  
+    }
+
 }
