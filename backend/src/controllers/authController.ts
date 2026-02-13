@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { registerUser, loginUser } from '../services/authService';
+import { registerUser, loginUser, updateUserProfile } from '../services/authService';
 import { AuthRequest } from '../middlewares/auth';
 
 export const register = async (
@@ -55,3 +55,22 @@ export const getMe = async (
   }
 };
 
+export const updateProfile = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { role, name, phone } = req.body;
+    const userId = req.user!._id.toString();
+
+    const updatedUser = await updateUserProfile(userId, { role, name, phone });
+
+    res.status(200).json({
+      success: true,
+      data: updatedUser,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -56,7 +56,7 @@ export default function ProviderBookings() {
   const loadBookings = async () => {
     setLoading(true);
     try {
-      const data = await bookingsAPI.getMyBookings({ limit: 100 });
+      const data = await bookingsAPI.getMyBookings({ limit: 100, role: 'provider' });
       setBookings(data);
     } catch (error: any) {
       toast({
@@ -219,8 +219,29 @@ export default function ProviderBookings() {
                 {filteredBookings.length > 0 ? (
                   <div className="space-y-4">
                     {filteredBookings.map((booking) => (
-                      <Card key={booking._id}>
+                      <Card
+                        key={booking._id}
+                        className={`border-l-8 shadow-sm ${booking.emergency
+                          ? 'bg-red-100 border-l-red-600 dark:bg-red-900/10'
+                          : 'bg-green-100 border-l-green-600 dark:bg-green-900/10'
+                          }`}
+                      >
                         <CardContent className="pt-6">
+                          {/* Explicit Label */}
+                          <div className={`font-extrabold uppercase tracking-wider text-sm mb-4 flex items-center gap-2 ${booking.emergency ? 'text-red-700' : 'text-green-700'
+                            }`}>
+                            {booking.emergency ? (
+                              <>
+                                <AlertCircle className="w-5 h-5" />
+                                <span>Emergency Service</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="w-5 h-5" />
+                                <span>Normal Service</span>
+                              </>
+                            )}
+                          </div>
                           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-3">
@@ -230,7 +251,7 @@ export default function ProviderBookings() {
                                 )}
                                 {getStatusBadge(booking.status)}
                               </div>
-                              
+
                               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-2">
                                   <User className="w-4 h-4" />
@@ -277,9 +298,16 @@ export default function ProviderBookings() {
                                 </Button>
                               )}
                               {booking.status === 'started' && (
-                                <Button onClick={() => handleComplete(booking._id)}>
-                                  Complete Service
-                                </Button>
+                                <button
+                                  onClick={() => handleComplete(booking._id)}
+                                  className="group flex items-center gap-3 bg-white/80 hover:bg-white px-4 py-2 rounded-lg shadow-sm transition-all border border-gray-200 cursor-pointer"
+                                  title="Click to complete this job"
+                                >
+                                  <span className="font-semibold text-gray-700 group-hover:text-green-700">Mark Completed</span>
+                                  <div className="h-8 w-8 rounded border-2 border-gray-400 group-hover:border-green-600 flex items-center justify-center bg-white transition-colors">
+                                    <CheckCircle className="w-6 h-6 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </div>
+                                </button>
                               )}
                               <Button
                                 variant="outline"

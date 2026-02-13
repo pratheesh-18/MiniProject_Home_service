@@ -62,7 +62,7 @@ export default function ProviderDashboard() {
       }
 
       // Get bookings
-      const bookingsData = await bookingsAPI.getMyBookings({ limit: 100 });
+      const bookingsData = await bookingsAPI.getMyBookings({ limit: 100, role: 'provider' });
       setBookings(bookingsData);
 
       // Calculate stats
@@ -274,33 +274,45 @@ export default function ProviderDashboard() {
                 {recentBookings.map((booking: any) => (
                   <div
                     key={booking._id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
+                    className={`flex items-center justify-between p-4 border-l-4 rounded-r-lg mb-3 shadow-sm ${booking.emergency
+                      ? 'bg-red-100 border-l-red-600 dark:bg-red-900/10'
+                      : 'bg-green-100 border-l-green-600 dark:bg-green-900/10'
+                      }`}
                   >
                     <div>
-                      <p className="font-medium">{booking.service}</p>
-                      <p className="text-sm text-muted-foreground">
+                      {/* Explicit Label */}
+                      <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${booking.emergency ? 'text-red-700' : 'text-green-700'
+                        }`}>
+                        {booking.emergency ? '🔴 Emergency Service' : '🟢 Normal Service'}
+                      </div>
+
+                      <p className="font-bold text-lg">{booking.service}</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
                         {booking.customer?.name || 'Customer'} • {booking.location?.address}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
                         {new Date(booking.createdAt).toLocaleDateString()}
                       </p>
                     </div>
+
                     <div className="flex items-center gap-2">
                       <Badge
                         variant={
                           booking.status === 'completed'
                             ? 'default'
                             : booking.status === 'pending'
-                            ? 'secondary'
-                            : 'outline'
+                              ? 'secondary'
+                              : 'outline'
                         }
                       >
                         {booking.status}
                       </Badge>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
                         onClick={() => navigate(`/provider/bookings/${booking._id}`)}
+                        className="hover:bg-white/50"
                       >
                         View
                       </Button>

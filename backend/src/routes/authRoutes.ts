@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe } from '../controllers/authController';
+import { register, login, getMe, updateProfile } from '../controllers/authController';
 import { authenticate } from '../middlewares/auth';
 import { validate } from '../middlewares/validator';
 import { authLimiter } from '../middlewares/rateLimiter';
@@ -32,6 +32,17 @@ router.post(
 );
 
 router.get('/me', authenticate, getMe);
+
+router.patch(
+  '/profile',
+  authenticate,
+  validate([
+    body('role').optional().isIn(['customer', 'provider']).withMessage('Invalid role'),
+    body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
+    body('phone').optional().trim().notEmpty().withMessage('Phone cannot be empty'),
+  ]),
+  updateProfile
+);
 
 export default router;
 

@@ -89,3 +89,50 @@ export const loginUser = async (
   return { user: userWithoutPassword!, token };
 };
 
+export const updateUserProfile = async (
+  userId: string,
+  updates: {
+    role?: 'customer' | 'provider' | 'admin';
+    name?: string;
+    phone?: string;
+  }
+): Promise<IUser> => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new ValidationError('User not found');
+  }
+
+  // Prevent admin role changes
+  if (updates.role && user.role === 'admin' && updates.role !== 'admin') {
+    throw new ValidationError('Cannot change admin role');
+  }
+
+  // If changing to provider, ensure provider profile exists
+  if (updates.role === 'provider' && user.role !== 'provider') {
+    const existingProvider = await Provider.findOne({ user: user._id });
+    if (!existingProvider) {
+      await Provider.create({
+        user: user._id,
+        services: [],
+        experience: 0,
+        hourlyRate: 0,
+        isVerified: false,
+        isAvailable: true,
+      });
+    }
+  }
+
+  // If changing from provider to customer, we can keep the provider profile
+  // (it won't be used if role is customer)
+
+  // Update user fields
+  if (updates.role !== undefined) user.role = updates.role;
+  if (updates.name !== undefined) user.name = updates.name;
+  if (updates.phone !== undefined) user.phone = updates.phone;
+
+  await user.save();
+
+  const userWithoutPassword = await User.findById(user._id).select('-password');
+  return userWithoutPassword!;
+};

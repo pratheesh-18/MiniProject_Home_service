@@ -62,7 +62,7 @@ export default function MyBookings() {
   const loadBookings = async () => {
     setLoading(true);
     try {
-      const data = await bookingsAPI.getMyBookings({ limit: 100 });
+      const data = await bookingsAPI.getMyBookings({ limit: 100, role: 'customer' });
       setBookings(data);
     } catch (error: any) {
       toast({
@@ -206,7 +206,7 @@ export default function MyBookings() {
                                 )}
                                 {getStatusBadge(booking.status)}
                               </div>
-                              
+
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-2">
                                   <User className="w-4 h-4" />
@@ -224,8 +224,8 @@ export default function MyBookings() {
                                   <Calendar className="w-4 h-4" />
                                   <span>
                                     {booking.scheduledAt
-                                      ? new Date(booking.scheduledAt).toLocaleString()
-                                      : 'Not scheduled'}
+                                      ? `Scheduled: ${new Date(booking.scheduledAt).toLocaleDateString()}`
+                                      : `Booked: ${new Date(booking.createdAt).toLocaleDateString()}`}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">

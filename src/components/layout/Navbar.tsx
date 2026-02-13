@@ -170,8 +170,18 @@ export function Navbar() {
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuItem>{t('common.profile')}</DropdownMenuItem>
-                  <DropdownMenuItem>{t('common.settings')}</DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center cursor-pointer">
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="flex items-center cursor-pointer">
+                      <User className="w-4 h-4 mr-2" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     <LogOut className="w-4 h-4 mr-2" />
@@ -260,6 +270,22 @@ export function Navbar() {
                       </Link>
                     </>
                   )}
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsOpen(false)}
+                    className="block px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                  >
+                    <User className="w-4 h-4 inline mr-2" />
+                    Profile
+                  </Link>
+                  <Link
+                    to="/settings"
+                    onClick={() => setIsOpen(false)}
+                    className="block px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted"
+                  >
+                    <User className="w-4 h-4 inline mr-2" />
+                    Settings
+                  </Link>
                   <button
                     onClick={() => {
                       handleLogout();

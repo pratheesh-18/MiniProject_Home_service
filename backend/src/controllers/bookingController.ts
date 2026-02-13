@@ -28,22 +28,22 @@ export const create = async (
 
     const booking = emergency
       ? await createEmergencyBooking(
-          req.user!._id.toString(),
-          service,
-          location,
-          estimatedDuration,
-          notes
-        )
+        req.user!._id.toString(),
+        service,
+        location,
+        estimatedDuration,
+        notes
+      )
       : await createBooking(
-          req.user!._id.toString(),
-          providerId,
-          service,
-          location,
-          estimatedDuration,
-          scheduledAt ? new Date(scheduledAt) : undefined,
-          notes,
-          emergency
-        );
+        req.user!._id.toString(),
+        providerId,
+        service,
+        location,
+        estimatedDuration,
+        scheduledAt ? new Date(scheduledAt) : undefined,
+        notes,
+        emergency
+      );
 
     res.status(201).json({
       success: true,
@@ -214,14 +214,17 @@ export const getMyBookings = async (
 
     const query: any = {};
 
-    if (req.user!.role === 'customer') {
-      query.customer = req.user!._id;
-    } else if (req.user!.role === 'provider') {
+    const roleFilter = req.query.role as string;
+
+    if (roleFilter === 'provider') {
+      // Explicitly requested provider view
+      // Verify user has a provider profile
       const Provider = require('../models/Provider').Provider;
       const provider = await Provider.findOne({ user: req.user!._id });
       if (provider) {
         query.provider = provider._id;
       } else {
+        // User requested provider view but is not a provider
         res.status(200).json({
           success: true,
           count: 0,
@@ -229,6 +232,10 @@ export const getMyBookings = async (
         });
         return;
       }
+    } else {
+      // Default to customer behavior (view their own bookings)
+      // This covers 'customer' role request and any fallback
+      query.customer = req.user!._id;
     }
 
     if (status) {

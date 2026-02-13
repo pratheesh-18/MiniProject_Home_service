@@ -125,7 +125,7 @@ export default function SearchPage() {
     }
   };
 
-  // Filter and sort providers
+  // Filter providers for list view (includes radius filter)
   const filteredProviders = useMemo(() => {
     let result = [...providers];
 
@@ -143,7 +143,7 @@ export default function SearchPage() {
       );
     }
 
-    // Filter by radius (if user location available)
+    // Filter by radius (if user location available) - only for list view
     if (userLocation) {
       result = result.filter(p => p.distance <= searchRadius);
     }
@@ -163,6 +163,30 @@ export default function SearchPage() {
 
     return result;
   }, [providers, selectedService, searchInput, searchRadius, sortBy, userLocation]);
+
+  // Filter providers for map view (excludes radius filter to show all locations)
+  const mapProviders = useMemo(() => {
+    let result = [...providers];
+
+    // Filter by service
+    if (selectedService) {
+      result = result.filter(p => p.services.some((s: string) => s.toLowerCase().includes(selectedService.toLowerCase())));
+    }
+
+    // Filter by search query
+    if (searchInput) {
+      const query = searchInput.toLowerCase();
+      result = result.filter(p => 
+        p.name.toLowerCase().includes(query) ||
+        p.services.some((s: string) => s.toLowerCase().includes(query))
+      );
+    }
+
+    // Filter out providers without valid location data
+    result = result.filter(p => p.location && p.location.lat !== 0 && p.location.lng !== 0);
+
+    return result;
+  }, [providers, selectedService, searchInput]);
 
   const handleBook = (provider: any) => {
     setProviderToBook(provider);
@@ -269,7 +293,14 @@ export default function SearchPage() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-4">
             <p className="text-muted-foreground">
-              <span className="font-medium text-foreground">{filteredProviders.length}</span> providers found
+              <span className="font-medium text-foreground">
+                {view === 'map' ? mapProviders.length : filteredProviders.length}
+              </span> providers found
+              {view === 'map' && filteredProviders.length !== mapProviders.length && (
+                <span className="text-xs ml-2">
+                  ({filteredProviders.length} within {searchRadius}km radius)
+                </span>
+              )}
             </p>
           </div>
 
@@ -288,7 +319,7 @@ export default function SearchPage() {
           ) : (
             <div className="h-[calc(100vh-280px)]">
               <ProviderMap
-                providers={filteredProviders}
+                providers={mapProviders}
                 onProviderSelect={setSelectedProvider}
                 className="h-full"
               />

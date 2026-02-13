@@ -32,9 +32,9 @@ export const createBooking = async (
     throw new ValidationError('Provider is not available');
   }
 
-  if (!provider.isVerified && !emergency) {
-    throw new ValidationError('Provider is not verified');
-  }
+  // if (!provider.isVerified && !emergency) {
+  //   throw new ValidationError('Provider is not verified');
+  // }
 
   // Calculate total amount
   const hourlyRate = provider.hourlyRate;

@@ -21,7 +21,7 @@ const apiRequest = async <T>(
   options: RequestInit = {}
 ): Promise<T> => {
   const token = getToken();
-  
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -52,11 +52,11 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    
+
     if (response.token) {
       setToken(response.token);
     }
-    
+
     return response;
   },
 
@@ -72,16 +72,27 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify(userData),
     });
-    
+
     if (response.token) {
       setToken(response.token);
     }
-    
+
     return response;
   },
 
   getCurrentUser: async () => {
     return apiRequest<any>('/auth/me');
+  },
+
+  updateProfile: async (profileData: {
+    role?: 'customer' | 'provider' | 'admin';
+    name?: string;
+    phone?: string;
+  }) => {
+    return apiRequest<any>('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(profileData),
+    });
   },
 
   logout: () => {
@@ -110,7 +121,7 @@ export const providersAPI = {
         queryParams.append(key, String(value));
       }
     });
-    
+
     return apiRequest<any[]>(`/providers/search?${queryParams.toString()}`);
   },
 
@@ -187,6 +198,7 @@ export const bookingsAPI = {
     status?: string;
     limit?: number;
     skip?: number;
+    role?: 'customer' | 'provider';
   }) => {
     const queryParams = new URLSearchParams();
     if (params) {
@@ -196,7 +208,7 @@ export const bookingsAPI = {
         }
       });
     }
-    
+
     const queryString = queryParams.toString();
     return apiRequest<any[]>(`/bookings${queryString ? `?${queryString}` : ''}`);
   },
@@ -256,7 +268,7 @@ export const ratingsAPI = {
         }
       });
     }
-    
+
     const queryString = queryParams.toString();
     return apiRequest<any[]>(`/ratings/provider/${providerId}${queryString ? `?${queryString}` : ''}`);
   },
@@ -283,7 +295,7 @@ export const adminAPI = {
         }
       });
     }
-    
+
     const queryString = queryParams.toString();
     return apiRequest<any>(`/admin/statistics/bookings${queryString ? `?${queryString}` : ''}`);
   },
@@ -312,7 +324,7 @@ export const adminAPI = {
         }
       });
     }
-    
+
     const queryString = queryParams.toString();
     return apiRequest<any[]>(`/admin/users${queryString ? `?${queryString}` : ''}`);
   },

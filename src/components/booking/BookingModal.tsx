@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Provider, useAppStore } from '@/store/useAppStore';
+import { bookingsAPI } from '@/lib/api';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
@@ -31,6 +32,7 @@ export function BookingModal({ provider, isOpen, onClose }: BookingModalProps) {
   const [isGroupBooking, setIsGroupBooking] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [address, setAddress] = useState('');
 
   const timeSlots = [
     '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
@@ -62,11 +64,71 @@ export function BookingModal({ provider, isOpen, onClose }: BookingModalProps) {
   };
 
   const handleConfirmBooking = async () => {
-    setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setStep('success');
+    if (!selectedDate || !selectedTime) {
+      toast({
+        title: 'Please select date and time',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!address && !userLocation?.address) {
+      toast({
+        title: 'Address required',
+        description: 'Please enter a service address.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      // Parse selected time (e.g. "09:00 AM")
+      const [timePart, period] = selectedTime.split(' ');
+      const [hoursStr, minutesStr] = timePart.split(':');
+      let hours = parseInt(hoursStr, 10);
+      const minutes = parseInt(minutesStr, 10);
+
+      if (period === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (period === 'AM' && hours === 12) {
+        hours = 0;
+      }
+
+      const scheduledAt = new Date(selectedDate);
+      scheduledAt.setHours(hours, minutes, 0, 0);
+
+      await bookingsAPI.create({
+        providerId: provider.id,
+        service: provider.services?.[0] || 'Home Service',
+        location: {
+          coordinates: userLocation
+            ? [userLocation.lng, userLocation.lat]
+            : [0, 0],
+          address: address || userLocation?.address || 'Address not provided',
+        },
+        estimatedDuration: 120, // 2 hours
+        scheduledAt: scheduledAt.toISOString(),
+        notes: specialInstructions || undefined,
+        emergency: false,
+      });
+
+      toast({
+        title: 'Booking created',
+        description: `Your booking with ${provider.name} has been created.`,
+      });
+
+      setStep('success');
+    } catch (error: any) {
+      toast({
+        title: 'Booking failed',
+        description: error?.message || 'Could not create booking. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -203,8 +265,9 @@ export function BookingModal({ provider, isOpen, onClose }: BookingModalProps) {
                         Service Location
                       </Label>
                       <Input
-                        value={userLocation?.address || 'Current Location'}
-                        readOnly
+                        placeholder={userLocation?.address || 'Enter service address'}
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
                         className="bg-muted"
                       />
                     </div>

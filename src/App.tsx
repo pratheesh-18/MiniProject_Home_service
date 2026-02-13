@@ -16,6 +16,8 @@ import ProviderDashboard from "./pages/ProviderDashboard";
 import ProviderServices from "./pages/ProviderServices";
 import ProviderBookings from "./pages/ProviderBookings";
 import MyBookings from "./pages/MyBookings";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { useAppStore } from "./store/useAppStore";
 import { authAPI } from "./lib/api";
@@ -77,6 +79,22 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <MyBookings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             }
           />
