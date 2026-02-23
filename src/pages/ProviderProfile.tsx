@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { 
-  Star, MapPin, CheckCircle, Clock, Phone, MessageSquare, 
+import {
+  Star, MapPin, CheckCircle, Clock, Phone, MessageSquare,
   Calendar, ArrowLeft, Shield, Award, Briefcase, Share2, Loader2
 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
@@ -23,6 +23,7 @@ interface ProviderData {
     name: string;
     email: string;
     phone: string;
+    profilePicture?: string;
   };
   services: string[];
   hourlyRate: number;
@@ -40,11 +41,12 @@ interface ProviderData {
 
 const transformProvider = (backendProvider: ProviderData) => {
   const [longitude, latitude] = backendProvider.currentLocation?.coordinates || [0, 0];
-  
+  const generatedAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(backendProvider.user.name)}&background=0d9488&color=fff`;
+
   return {
     id: backendProvider._id,
     name: backendProvider.user.name,
-    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(backendProvider.user.name)}&background=0d9488&color=fff`,
+    avatar: backendProvider.user.profilePicture || generatedAvatar,
     services: backendProvider.services || [],
     hourlyRate: backendProvider.hourlyRate || 0,
     rating: backendProvider.rating || 0,
@@ -271,11 +273,10 @@ export default function ProviderProfilePage() {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`w-4 h-4 ${
-                                i < rating.rating
+                              className={`w-4 h-4 ${i < rating.rating
                                   ? 'fill-yellow-400 text-yellow-400'
                                   : 'text-muted-foreground'
-                              }`}
+                                }`}
                             />
                           ))}
                         </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,13 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAppStore } from '@/store/useAppStore';
 import { authAPI } from '@/lib/api';
-import { Loader2, User, Mail, Phone, Shield, Briefcase, ArrowLeft } from 'lucide-react';
+import { Loader2, User, Mail, Phone, Shield, Briefcase, ArrowLeft, Camera } from 'lucide-react';
 
 export default function Profile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, setUser } = useAppStore();
   const [loading, setLoading] = useState(true);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [profileData, setProfileData] = useState<{
     _id: string;
     name: string;
@@ -21,6 +23,7 @@ export default function Profile() {
     phone: string;
     role: 'customer' | 'provider' | 'admin';
     createdAt?: string;
+    profilePicture?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -38,6 +41,7 @@ export default function Profile() {
         phone: data.phone,
         role: data.role,
         createdAt: data.createdAt,
+        profilePicture: data.profilePicture,
       });
     } catch (error: any) {
       toast({
@@ -71,6 +75,92 @@ export default function Profile() {
       </Badge>
     );
   };
+
+  // Compress & convert image file to Base64
+  const processImageFile = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_SIZE = 256;
+          let { width, height } = img;
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height = Math.round((height * MAX_SIZE) / width);
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width = Math.round((width * MAX_SIZE) / height);
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please select an image file (JPEG, PNG, etc.)',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUploadingPicture(true);
+    try {
+      const base64Image = await processImageFile(file);
+      const updatedUser = await authAPI.uploadProfilePicture(base64Image);
+      const newPicture = updatedUser.profilePicture || base64Image;
+
+      setProfileData((prev) =>
+        prev ? { ...prev, profilePicture: newPicture } : prev
+      );
+
+      // Sync to global store so Navbar & all pages update instantly
+      if (user) {
+        setUser({ ...user, profilePicture: newPicture });
+      }
+
+      toast({
+        title: 'Profile picture updated!',
+        description: 'Your new profile picture has been saved.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Upload failed',
+        description: error.message || 'Failed to upload profile picture',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingPicture(false);
+      // Reset the input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const getAvatarUrl = (name: string) =>
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0d9488&color=fff&size=256`;
 
   if (loading) {
     return (
@@ -124,6 +214,51 @@ export default function Profile() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
+              {/* Profile Picture */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative group">
+                  <img
+                    src={profileData.profilePicture || getAvatarUrl(profileData.name)}
+                    alt={profileData.name}
+                    className="w-28 h-28 rounded-full object-cover border-4 border-primary/20 shadow-md"
+                  />
+
+                  {/* Upload Overlay */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingPicture}
+                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                    aria-label="Change profile picture"
+                  >
+                    {uploadingPicture ? (
+                      <Loader2 className="w-7 h-7 text-white animate-spin" />
+                    ) : (
+                      <Camera className="w-7 h-7 text-white" />
+                    )}
+                  </button>
+
+                  {/* Camera badge */}
+                  {!uploadingPicture && (
+                    <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-primary rounded-full border-2 border-background flex items-center justify-center shadow">
+                      <Camera className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+
+                <p className="text-xs text-muted-foreground">
+                  {uploadingPicture ? 'Uploading…' : 'Click the photo to change your profile picture'}
+                </p>
+              </div>
+
               {/* Name */}
               <div className="flex items-start gap-4">
                 <div className="p-2 rounded-lg bg-accent">

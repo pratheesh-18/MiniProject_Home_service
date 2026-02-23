@@ -40,12 +40,13 @@ function AuthInitializer() {
           email: user.email,
           phone: user.phone,
           role: user.role,
+          profilePicture: user.profilePicture || undefined,
           location: user.location?.coordinates
             ? {
-                lat: user.location.coordinates[1],
-                lng: user.location.coordinates[0],
-                address: user.address,
-              }
+              lat: user.location.coordinates[1],
+              lng: user.location.coordinates[0],
+              address: user.address,
+            }
             : undefined,
         });
       } catch (error) {

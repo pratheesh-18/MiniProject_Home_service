@@ -46,6 +46,7 @@ export interface User {
   phone: string;
   role: 'customer' | 'provider' | 'admin';
   avatar?: string;
+  profilePicture?: string;
   location?: Location;
 }
 
@@ -53,25 +54,25 @@ interface AppState {
   // User state
   user: User | null;
   setUser: (user: User | null) => void;
-  
+
   // Location state
   userLocation: Location | null;
   setUserLocation: (location: Location | null) => void;
   isDetectingLocation: boolean;
   setIsDetectingLocation: (detecting: boolean) => void;
-  
+
   // Providers state
   providers: Provider[];
   setProviders: (providers: Provider[]) => void;
   selectedProvider: Provider | null;
   setSelectedProvider: (provider: Provider | null) => void;
-  
+
   // Booking state
   currentBooking: Booking | null;
   setCurrentBooking: (booking: Booking | null) => void;
   bookings: Booking[];
   setBookings: (bookings: Booking[]) => void;
-  
+
   // UI state
   selectedService: string | null;
   setSelectedService: (service: string | null) => void;
@@ -87,25 +88,25 @@ export const useAppStore = create<AppState>((set) => ({
   // User state
   user: null,
   setUser: (user) => set({ user }),
-  
+
   // Location state
   userLocation: null,
   setUserLocation: (userLocation) => set({ userLocation }),
   isDetectingLocation: false,
   setIsDetectingLocation: (isDetectingLocation) => set({ isDetectingLocation }),
-  
+
   // Providers state
   providers: [],
   setProviders: (providers) => set({ providers }),
   selectedProvider: null,
   setSelectedProvider: (selectedProvider) => set({ selectedProvider }),
-  
+
   // Booking state
   currentBooking: null,
   setCurrentBooking: (currentBooking) => set({ currentBooking }),
   bookings: [],
   setBookings: (bookings) => set({ bookings }),
-  
+
   // UI state
   selectedService: null,
   setSelectedService: (selectedService) => set({ selectedService }),

@@ -88,10 +88,18 @@ export const authAPI = {
     role?: 'customer' | 'provider' | 'admin';
     name?: string;
     phone?: string;
+    profilePicture?: string;
   }) => {
     return apiRequest<any>('/auth/profile', {
       method: 'PATCH',
       body: JSON.stringify(profileData),
+    });
+  },
+
+  uploadProfilePicture: async (base64Image: string) => {
+    return apiRequest<any>('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({ profilePicture: base64Image }),
     });
   },
 

@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAppStore } from '@/store/useAppStore';
-import { providersAPI, bookingsAPI } from '@/lib/api';
-import { Loader2, Briefcase, DollarSign, Star, CheckCircle, XCircle, Settings, Calendar, TrendingUp } from 'lucide-react';
+import { providersAPI, bookingsAPI, authAPI } from '@/lib/api';
+import { Loader2, Briefcase, DollarSign, Star, CheckCircle, XCircle, Settings, Calendar, TrendingUp, User } from 'lucide-react';
 
 interface ProviderProfile {
   _id: string;
@@ -26,6 +26,7 @@ interface ProviderProfile {
     name: string;
     email: string;
     phone: string;
+    profilePicture?: string;
   };
 }
 
@@ -36,6 +37,7 @@ export default function ProviderDashboard() {
   const [loading, setLoading] = useState(true);
   const [provider, setProvider] = useState<ProviderProfile | null>(null);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [currentUserPicture, setCurrentUserPicture] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalBookings: 0,
     pendingBookings: 0,
@@ -52,6 +54,12 @@ export default function ProviderDashboard() {
 
     setLoading(true);
     try {
+      // Fetch current user profile to get profile picture
+      try {
+        const userData = await authAPI.getCurrentUser();
+        setCurrentUserPicture(userData.profilePicture || null);
+      } catch (_) { }
+
       // Get provider profile
       try {
         const providerData = await providersAPI.getMyProfile();
@@ -126,9 +134,33 @@ export default function ProviderDashboard() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Provider Dashboard</h1>
-              <p className="text-muted-foreground">Manage your services and bookings</p>
+            <div className="flex items-center gap-4">
+              {/* Profile Picture */}
+              <div className="relative">
+                {currentUserPicture ? (
+                  <img
+                    src={currentUserPicture}
+                    alt={provider?.user?.name || user?.name || 'Provider'}
+                    className="w-14 h-14 rounded-full object-cover border-2 border-primary/30 shadow-sm cursor-pointer"
+                    onClick={() => navigate('/profile')}
+                    title="Go to profile"
+                  />
+                ) : (
+                  <div
+                    className="w-14 h-14 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center cursor-pointer shadow-sm"
+                    onClick={() => navigate('/profile')}
+                    title="Go to profile"
+                  >
+                    <User className="w-7 h-7 text-primary" />
+                  </div>
+                )}
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-background" title="Online" />
+              </div>
+
+              <div>
+                <h1 className="text-3xl font-bold mb-1">Provider Dashboard</h1>
+                <p className="text-muted-foreground">Manage your services and bookings</p>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => navigate('/provider/services')}>

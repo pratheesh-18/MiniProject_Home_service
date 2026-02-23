@@ -35,6 +35,7 @@ interface BackendProvider {
     name: string;
     email: string;
     phone: string;
+    profilePicture?: string;
   };
   services: string[];
   hourlyRate: number;
@@ -53,7 +54,7 @@ interface BackendProvider {
 // Transform backend provider to frontend Provider format
 const transformProvider = (backendProvider: BackendProvider, userLocation?: { lat: number; lng: number }): any => {
   const [longitude, latitude] = backendProvider.currentLocation?.coordinates || [0, 0];
-  
+
   // Calculate distance if user location is available
   let distance = 0;
   if (userLocation && latitude && longitude) {
@@ -63,9 +64,9 @@ const transformProvider = (backendProvider: BackendProvider, userLocation?: { la
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((userLocation.lat * Math.PI) / 180) *
-        Math.cos((latitude * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos((latitude * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     distance = R * c;
   }
@@ -73,7 +74,7 @@ const transformProvider = (backendProvider: BackendProvider, userLocation?: { la
   return {
     id: backendProvider._id,
     name: backendProvider.user.name,
-    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(backendProvider.user.name)}&background=0d9488&color=fff`,
+    avatar: backendProvider.user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(backendProvider.user.name)}&background=0d9488&color=fff`,
     services: backendProvider.services || [],
     hourlyRate: backendProvider.hourlyRate || 0,
     rating: backendProvider.rating || 0,
@@ -137,7 +138,7 @@ export default function SearchPage() {
     // Filter by search query
     if (searchInput) {
       const query = searchInput.toLowerCase();
-      result = result.filter(p => 
+      result = result.filter(p =>
         p.name.toLowerCase().includes(query) ||
         p.services.some((s: string) => s.toLowerCase().includes(query))
       );
@@ -176,7 +177,7 @@ export default function SearchPage() {
     // Filter by search query
     if (searchInput) {
       const query = searchInput.toLowerCase();
-      result = result.filter(p => 
+      result = result.filter(p =>
         p.name.toLowerCase().includes(query) ||
         p.services.some((s: string) => s.toLowerCase().includes(query))
       );

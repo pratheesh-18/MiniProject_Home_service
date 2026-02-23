@@ -73,11 +73,10 @@ export function Navbar() {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive(link.path)
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(link.path)
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
+                  }`}
               >
                 {link.label}
               </Link>
@@ -129,9 +128,17 @@ export function Navbar() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
-                    <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-                      <User className="w-4 h-4 text-accent-foreground" />
-                    </div>
+                    {user.profilePicture ? (
+                      <img
+                        src={user.profilePicture}
+                        alt={user.name}
+                        className="w-8 h-8 rounded-full object-cover border-2 border-primary/20"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+                        <User className="w-4 h-4 text-accent-foreground" />
+                      </div>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
@@ -223,22 +230,34 @@ export function Navbar() {
                   key={link.path}
                   to={link.path}
                   onClick={() => setIsOpen(false)}
-                  className={`block px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                    isActive(link.path)
+                  className={`block px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive(link.path)
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
+                    }`}
                 >
                   {link.label}
                 </Link>
               ))}
-              
+
               {/* Mobile User Section */}
               {user ? (
                 <div className="pt-4 border-t border-border space-y-2">
-                  <div className="px-4 py-2">
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <div className="px-4 py-2 flex items-center gap-3">
+                    {user.profilePicture ? (
+                      <img
+                        src={user.profilePicture}
+                        alt={user.name}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 text-accent-foreground" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium">{user.name}</p>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
                   </div>
                   {user.role === 'admin' && (
                     <Link

@@ -12,6 +12,7 @@ export interface IUser extends Document {
   };
   address?: string;
   isVerified: boolean;
+  profilePicture?: string;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -66,6 +67,10 @@ const UserSchema = new Schema<IUser>(
     isVerified: {
       type: Boolean,
       default: false,
+    },
+    profilePicture: {
+      type: String,
+      default: null,
     },
   },
   {

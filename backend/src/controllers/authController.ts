@@ -61,10 +61,10 @@ export const updateProfile = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { role, name, phone } = req.body;
+    const { role, name, phone, profilePicture } = req.body;
     const userId = req.user!._id.toString();
 
-    const updatedUser = await updateUserProfile(userId, { role, name, phone });
+    const updatedUser = await updateUserProfile(userId, { role, name, phone, profilePicture });
 
     res.status(200).json({
       success: true,

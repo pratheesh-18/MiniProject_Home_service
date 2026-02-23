@@ -95,6 +95,7 @@ export const updateUserProfile = async (
     role?: 'customer' | 'provider' | 'admin';
     name?: string;
     phone?: string;
+    profilePicture?: string;
   }
 ): Promise<IUser> => {
   const user = await User.findById(userId);
@@ -130,6 +131,7 @@ export const updateUserProfile = async (
   if (updates.role !== undefined) user.role = updates.role;
   if (updates.name !== undefined) user.name = updates.name;
   if (updates.phone !== undefined) user.phone = updates.phone;
+  if (updates.profilePicture !== undefined) user.profilePicture = updates.profilePicture;
 
   await user.save();
 

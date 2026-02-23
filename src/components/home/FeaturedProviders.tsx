@@ -15,6 +15,7 @@ interface BackendProvider {
     name: string;
     email: string;
     phone: string;
+    profilePicture?: string;
   };
   services: string[];
   hourlyRate: number;
@@ -30,11 +31,11 @@ interface BackendProvider {
 
 const transformProvider = (backendProvider: BackendProvider) => {
   const [longitude, latitude] = backendProvider.currentLocation?.coordinates || [0, 0];
-  
+
   return {
     id: backendProvider._id,
     name: backendProvider.user.name,
-    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(backendProvider.user.name)}&background=0d9488&color=fff`,
+    avatar: backendProvider.user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(backendProvider.user.name)}&background=0d9488&color=fff`,
     services: backendProvider.services || [],
     hourlyRate: backendProvider.hourlyRate || 0,
     rating: backendProvider.rating || 0,
